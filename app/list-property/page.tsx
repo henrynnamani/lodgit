@@ -5,26 +5,62 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import {
   Home, ArrowLeft, Upload, Video, Image as ImageIcon,
-  CheckCircle, Loader, X, Play
+  CheckCircle, Loader, Play, Banknote, Info,
 } from "lucide-react";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const AMENITIES = [
-  { value: "water", label: "💧 Running Water" },
+  { value: "water",       label: "💧 Running Water" },
   { value: "electricity", label: "⚡ Electricity (NEPA)" },
-  { value: "security", label: "🔒 Security" },
-  { value: "parking", label: "🚗 Parking" },
-  { value: "wifi", label: "📶 WiFi" },
+  { value: "security",    label: "🔒 Security" },
+  { value: "parking",     label: "🚗 Parking" },
+  { value: "wifi",        label: "📶 WiFi" },
 ];
+
+const FEE_FIELDS = [
+  {
+    key: "agentFee",
+    label: "Agent Fee",
+    placeholder: "e.g. 15000",
+    tip: "One-time fee paid to you as the agent",
+  },
+  {
+    key: "legalFee",
+    label: "Legal Fee",
+    placeholder: "e.g. 10000",
+    tip: "Documentation and tenancy agreement costs",
+  },
+  {
+    key: "cautionFee",
+    label: "Caution / Security Deposit",
+    placeholder: "e.g. 15000",
+    tip: "Refundable deposit held by the landlord",
+  },
+  {
+    key: "serviceCharge",
+    label: "Service Charge",
+    placeholder: "e.g. 5000",
+    tip: "Covers maintenance and shared utilities",
+  },
+  {
+    key: "agreementFee",
+    label: "Agreement Fee",
+    placeholder: "e.g. 10000",
+    tip: "Signing and stamping of the tenancy agreement",
+  },
+] as const;
 
 const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "demo";
 const CLOUDINARY_UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "ml_default";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function uploadToCloudinary(file: File, resourceType: "image" | "video") {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", "lodgeit");
-
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
     { method: "POST", body: formData }
@@ -33,12 +69,17 @@ async function uploadToCloudinary(file: File, resourceType: "image" | "video") {
   return await res.json();
 }
 
+const fmt = (n: number) => `₦${n.toLocaleString()}`;
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ListPropertyPage() {
   const createListing = useMutation(api.listings.create);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [tooltip, setTooltip] = useState<string | null>(null);
   const thumbRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +99,12 @@ export default function ListPropertyPage() {
     agentName: "",
     agentEmail: "",
     agentPhone: "",
+    // ── Payment breakdown ──
+    agentFee: "",
+    legalFee: "",
+    cautionFee: "",
+    serviceCharge: "",
+    agreementFee: "",
   });
 
   const [thumbPreview, setThumbPreview] = useState("");
@@ -74,6 +121,13 @@ export default function ListPropertyPage() {
     );
   };
 
+  // ── Total move-in cost preview ──
+  const totalMoveIn = (() => {
+    const price = Number(form.price) || 0;
+    const fees = FEE_FIELDS.reduce((sum, f) => sum + (Number(form[f.key]) || 0), 0);
+    return price + fees;
+  })();
+
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -83,7 +137,6 @@ export default function ListPropertyPage() {
       const data = await uploadToCloudinary(file, "image");
       update("thumbnailUrl", data.secure_url);
     } catch {
-      // For demo: use object URL as fallback
       update("thumbnailUrl", URL.createObjectURL(file));
     } finally {
       setUploadingThumb(false);
@@ -120,9 +173,14 @@ export default function ListPropertyPage() {
         videoUrl: form.videoUrl || undefined,
         videoPublicId: form.videoPublicId || undefined,
         distanceToSchool: form.distanceToSchool || undefined,
+        agentFee:      form.agentFee      ? Number(form.agentFee)      : undefined,
+        legalFee:      form.legalFee      ? Number(form.legalFee)      : undefined,
+        cautionFee:    form.cautionFee    ? Number(form.cautionFee)    : undefined,
+        serviceCharge: form.serviceCharge ? Number(form.serviceCharge) : undefined,
+        agreementFee:  form.agreementFee  ? Number(form.agreementFee)  : undefined,
       });
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       alert("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -130,9 +188,10 @@ export default function ListPropertyPage() {
   };
 
   const inputClass =
-    "w-full bg-dark-700 border border-dark-500 text-white text-sm rounded-xl px-4 py-2.5 placeholder:text-gray-600 focus:border-lodge-500 transition-colors";
+    "w-full bg-dark-700 border border-dark-500 text-white text-sm rounded-xl px-4 py-2.5 placeholder:text-gray-600 focus:border-lodge-500 focus:outline-none transition-colors";
   const labelClass = "text-xs font-medium text-gray-400 mb-1.5 block";
 
+  // ── Success screen ──
   if (submitted) {
     return (
       <div className="min-h-screen bg-dark-900 flex items-center justify-center p-6">
@@ -143,7 +202,7 @@ export default function ListPropertyPage() {
           <div>
             <h2 className="font-display font-bold text-white text-xl">Listing Submitted!</h2>
             <p className="text-gray-500 text-sm mt-2 leading-relaxed">
-              Your property has been listed and is now visible to students. You'll receive viewing requests directly.
+              Your property is now visible to students. You'll receive viewing requests directly.
             </p>
           </div>
           <Link
@@ -159,7 +218,8 @@ export default function ListPropertyPage() {
 
   return (
     <div className="min-h-screen bg-dark-900">
-      {/* Nav */}
+
+      {/* ── Nav ── */}
       <nav className="sticky top-0 z-40 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
@@ -169,29 +229,26 @@ export default function ListPropertyPage() {
             <span className="font-display font-bold text-white text-base tracking-tight">LodgeIt</span>
           </Link>
           <Link href="/" className="flex items-center gap-1.5 text-gray-500 hover:text-white text-sm transition-colors">
-            <ArrowLeft size={14} />
-            Back
+            <ArrowLeft size={14} /> Back
           </Link>
         </div>
       </nav>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white">
-            List Your Property
-          </h1>
+          <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white">List Your Property</h1>
           <p className="text-gray-500 text-sm mt-1.5">
             Reach hundreds of students looking for accommodation near campus.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-          {/* Media Upload */}
+
+          {/* ── Media Upload ── */}
           <div className="bg-dark-800 border border-dark-700 rounded-2xl p-5 flex flex-col gap-5">
             <h2 className="font-display font-bold text-white text-sm">📸 Photos & Video</h2>
-
             <div className="grid sm:grid-cols-2 gap-4">
+
               {/* Thumbnail */}
               <div>
                 <label className={labelClass}>Thumbnail Image *</label>
@@ -220,13 +277,7 @@ export default function ListPropertyPage() {
                     </div>
                   )}
                 </div>
-                <input
-                  ref={thumbRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleThumbnailUpload}
-                />
+                <input ref={thumbRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
                 {form.thumbnailUrl && !uploadingThumb && (
                   <p className="text-emerald-500 text-[10px] mt-1 flex items-center gap-1">
                     <CheckCircle size={10} /> Uploaded
@@ -236,9 +287,7 @@ export default function ListPropertyPage() {
 
               {/* Video */}
               <div>
-                <label className={labelClass}>
-                  Video Tour <span className="text-gray-600">(optional)</span>
-                </label>
+                <label className={labelClass}>Video Tour <span className="text-gray-600">(optional)</span></label>
                 <div
                   onClick={() => videoRef.current?.click()}
                   className="relative aspect-[4/3] rounded-xl border-2 border-dashed border-dark-600 hover:border-lodge-500/50 transition-colors cursor-pointer overflow-hidden bg-dark-700 flex items-center justify-center group"
@@ -247,11 +296,10 @@ export default function ListPropertyPage() {
                     <>
                       <video src={videoPreview} className="absolute inset-0 w-full h-full object-cover" muted />
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        {uploadingVideo ? (
-                          <Loader size={20} className="animate-spin text-white" />
-                        ) : (
-                          <Play size={24} fill="white" className="text-white" />
-                        )}
+                        {uploadingVideo
+                          ? <Loader size={20} className="animate-spin text-white" />
+                          : <Play size={24} fill="white" className="text-white" />
+                        }
                       </div>
                     </>
                   ) : (
@@ -262,13 +310,7 @@ export default function ListPropertyPage() {
                     </div>
                   )}
                 </div>
-                <input
-                  ref={videoRef}
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleVideoUpload}
-                />
+                <input ref={videoRef} type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                 {form.videoUrl && !uploadingVideo && (
                   <p className="text-emerald-500 text-[10px] mt-1 flex items-center gap-1">
                     <CheckCircle size={10} /> Uploaded
@@ -278,7 +320,7 @@ export default function ListPropertyPage() {
             </div>
           </div>
 
-          {/* Property Details */}
+          {/* ── Property Details ── */}
           <div className="bg-dark-800 border border-dark-700 rounded-2xl p-5 flex flex-col gap-4">
             <h2 className="font-display font-bold text-white text-sm">🏠 Property Details</h2>
 
@@ -308,12 +350,7 @@ export default function ListPropertyPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Room Type *</label>
-                <select
-                  required
-                  value={form.roomType}
-                  onChange={(e) => update("roomType", e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
+                <select required value={form.roomType} onChange={(e) => update("roomType", e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="single">Single Room</option>
                   <option value="self-contain">Self-Contain</option>
                   <option value="shared">Shared Room</option>
@@ -337,12 +374,7 @@ export default function ListPropertyPage() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>City *</label>
-                <select
-                  required
-                  value={form.city}
-                  onChange={(e) => update("city", e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
+                <select required value={form.city} onChange={(e) => update("city", e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="Enugu">Enugu</option>
                   <option value="Nsukka">Nsukka</option>
                   <option value="Awka">Awka</option>
@@ -352,12 +384,7 @@ export default function ListPropertyPage() {
               </div>
               <div>
                 <label className={labelClass}>Availability *</label>
-                <select
-                  required
-                  value={form.availability}
-                  onChange={(e) => update("availability", e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
+                <select required value={form.availability} onChange={(e) => update("availability", e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="immediate">Available Now</option>
                   <option value="next-month">Next Month</option>
                 </select>
@@ -377,11 +404,7 @@ export default function ListPropertyPage() {
               </div>
               <div>
                 <label className={labelClass}>Walking Distance to Campus</label>
-                <select
-                  value={form.distanceToSchool}
-                  onChange={(e) => update("distanceToSchool", e.target.value)}
-                  className={`${inputClass} cursor-pointer`}
-                >
+                <select value={form.distanceToSchool} onChange={(e) => update("distanceToSchool", e.target.value)} className={`${inputClass} cursor-pointer`}>
                   <option value="5min">≤ 5 minutes</option>
                   <option value="10min">≤ 10 minutes</option>
                   <option value="20min">≤ 20 minutes</option>
@@ -396,34 +419,99 @@ export default function ListPropertyPage() {
                 {AMENITIES.map((a) => (
                   <label
                     key={a.value}
+                    onClick={() => toggleAmenity(a.value)}
                     className={`flex items-center gap-2.5 cursor-pointer p-2.5 rounded-xl border transition-colors ${
                       form.amenities.includes(a.value)
                         ? "bg-lodge-500/10 border-lodge-500/40 text-lodge-400"
                         : "bg-dark-700 border-dark-600 text-gray-500 hover:border-dark-500"
                     }`}
                   >
-                    <div
-                      onClick={() => toggleAmenity(a.value)}
-                      className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                        form.amenities.includes(a.value)
-                          ? "bg-lodge-500 border-lodge-500"
-                          : "border-dark-400"
-                      }`}
-                    >
+                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                      form.amenities.includes(a.value) ? "bg-lodge-500 border-lodge-500" : "border-dark-400"
+                    }`}>
                       {form.amenities.includes(a.value) && (
                         <svg width="7" height="5" viewBox="0 0 8 6" fill="none">
                           <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </div>
-                    <span onClick={() => toggleAmenity(a.value)} className="text-xs">{a.label}</span>
+                    <span className="text-xs">{a.label}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Agent Details */}
+          {/* ── Payment Breakdown ── */}
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-5 flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Banknote size={15} className="text-lodge-400" />
+                  <h2 className="font-display font-bold text-white text-sm">💰 Payment Breakdown</h2>
+                </div>
+                <p className="text-gray-600 text-xs mt-1">
+                  Optional but recommended — helps students understand the full move-in cost upfront.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {FEE_FIELDS.map((field) => (
+                <div key={field.key}>
+                  <label className={labelClass}>
+                    <span className="flex items-center gap-1.5">
+                      {field.label}
+                      <span className="text-gray-600">(optional)</span>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setTooltip(field.key)}
+                        onMouseLeave={() => setTooltip(null)}
+                        className="relative text-gray-600 hover:text-gray-400 transition-colors"
+                      >
+                        <Info size={11} />
+                        {tooltip === field.key && (
+                          <div className="absolute left-5 -top-1 z-10 w-44 bg-dark-700 border border-dark-600 text-gray-300 text-[10px] leading-relaxed rounded-lg px-2.5 py-2 shadow-xl pointer-events-none">
+                            {field.tip}
+                          </div>
+                        )}
+                      </button>
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 text-sm pointer-events-none">₦</span>
+                    <input
+                      type="number"
+                      value={form[field.key]}
+                      onChange={(e) => update(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      min={0}
+                      className={`${inputClass} pl-7`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Live total preview */}
+            {totalMoveIn > 0 && (
+              <div className="flex items-center justify-between bg-lodge-500/10 border border-lodge-500/20 rounded-xl px-4 py-3 mt-1">
+                <div>
+                  <p className="text-lodge-300 text-xs font-semibold uppercase tracking-wide">Estimated Move-In Total</p>
+                  <p className="text-gray-500 text-[10px] mt-0.5">Rent + all fees entered above</p>
+                </div>
+                <p className="font-display font-extrabold text-lodge-300 text-xl tabular-nums">
+                  {fmt(totalMoveIn)}
+                </p>
+              </div>
+            )}
+
+            <p className="text-gray-600 text-[10px] leading-relaxed">
+              * Leave fields blank if they don't apply. Caution fee is typically refundable — let students know in your description.
+            </p>
+          </div>
+
+          {/* ── Agent Details ── */}
           <div className="bg-dark-800 border border-dark-700 rounded-2xl p-5 flex flex-col gap-4">
             <h2 className="font-display font-bold text-white text-sm">👤 Agent Information</h2>
             <p className="text-gray-600 text-xs -mt-2">
@@ -470,11 +558,7 @@ export default function ListPropertyPage() {
             disabled={loading || uploadingThumb || uploadingVideo}
             className="w-full flex items-center justify-center gap-2 lodge-gradient hover:opacity-90 disabled:opacity-60 text-white font-display font-bold text-base py-4 rounded-2xl transition-opacity"
           >
-            {loading ? (
-              <Loader size={18} className="animate-spin" />
-            ) : (
-              <Upload size={18} />
-            )}
+            {loading ? <Loader size={18} className="animate-spin" /> : <Upload size={18} />}
             {loading ? "Publishing..." : "Publish Listing"}
           </button>
 

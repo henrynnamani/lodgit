@@ -20,6 +20,12 @@ export default defineSchema({
     agentPhone: v.string(),
     isActive: v.boolean(),
     createdAt: v.number(),
+    // ── Payment breakdown ──
+    agentFee: v.optional(v.number()),
+    legalFee: v.optional(v.number()),
+    cautionFee: v.optional(v.number()),
+    serviceCharge: v.optional(v.number()),
+    agreementFee: v.optional(v.number()),
   })
     .index("by_city", ["city"])
     .index("by_roomType", ["roomType"])

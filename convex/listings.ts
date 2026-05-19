@@ -1,6 +1,15 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+// ── Shared payment breakdown validator ──
+const paymentBreakdownFields = {
+  agentFee: v.optional(v.number()),
+  legalFee: v.optional(v.number()),
+  cautionFee: v.optional(v.number()),
+  serviceCharge: v.optional(v.number()),
+  agreementFee: v.optional(v.number()),
+};
+
 export const getAll = query({
   args: {
     city: v.optional(v.string()),
@@ -69,6 +78,8 @@ export const create = mutation({
     agentName: v.string(),
     agentEmail: v.string(),
     agentPhone: v.string(),
+    // ── Payment breakdown ──
+    ...paymentBreakdownFields,
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("listings", {
@@ -88,15 +99,22 @@ export const seedListings = mutation({
     const listings = [
       {
         title: "Cozy Self-Contain off Ekulu",
-        description: "Spacious self-contain with modern finishing, running water and 24/7 electricity. Tiled floors, wardrobe space and burglar-proof windows. Very serene environment.",
+        description:
+          "Spacious self-contain with modern finishing, running water and 24/7 electricity. Tiled floors, wardrobe space and burglar-proof windows. Very serene environment.",
         price: 180000,
+        agentFee: 18000,
+        legalFee: 10000,
+        cautionFee: 18000,
+        serviceCharge: 5000,
+        agreementFee: 10000,
         roomType: "self-contain",
         location: "Ekulu, Enugu",
         city: "Enugu",
         distanceToSchool: "10min",
         amenities: ["water", "electricity", "security"],
         availability: "immediate",
-        thumbnailUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80",
         videoUrl: "",
         agentName: "Chukwudi Okafor",
         agentEmail: "chukwudi@lodgeit.ng",
@@ -106,15 +124,22 @@ export const seedListings = mutation({
       },
       {
         title: "Single Room – New Build Awkunanaw",
-        description: "Brand new single room in a quiet compound. Kitchen and bathroom shared among 4 students. Good road access and very close to bus stop.",
+        description:
+          "Brand new single room in a quiet compound. Kitchen and bathroom shared among 4 students. Good road access and very close to bus stop.",
         price: 95000,
+        agentFee: 9500,
+        legalFee: 5000,
+        cautionFee: 9500,
+        serviceCharge: 0,
+        agreementFee: 5000,
         roomType: "single",
         location: "Awkunanaw, Enugu",
         city: "Enugu",
         distanceToSchool: "5min",
         amenities: ["water", "electricity"],
         availability: "immediate",
-        thumbnailUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
         videoUrl: "",
         agentName: "Ngozi Eze",
         agentEmail: "ngozi@lodgeit.ng",
@@ -124,15 +149,22 @@ export const seedListings = mutation({
       },
       {
         title: "2-Bedroom Flat – Independence Layout",
-        description: "Well-maintained 2-bedroom flat with sitting room, kitchen and 2 bathrooms. Fully tiled, with constant EEDC supply. Suitable for small group of students.",
+        description:
+          "Well-maintained 2-bedroom flat with sitting room, kitchen and 2 bathrooms. Fully tiled, with constant EEDC supply. Suitable for small group of students.",
         price: 450000,
+        agentFee: 45000,
+        legalFee: 20000,
+        cautionFee: 45000,
+        serviceCharge: 10000,
+        agreementFee: 20000,
         roomType: "flat",
         location: "Independence Layout, Enugu",
         city: "Enugu",
         distanceToSchool: "20min",
         amenities: ["water", "electricity", "parking", "security"],
         availability: "next-month",
-        thumbnailUrl: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&q=80",
         videoUrl: "",
         agentName: "Emeka Nwosu",
         agentEmail: "emeka@lodgeit.ng",
@@ -142,15 +174,22 @@ export const seedListings = mutation({
       },
       {
         title: "Shared Room – Hilltop Nsukka",
-        description: "Affordable shared room for 2 students. Close to UNN main gate. Shared bathroom and kitchen facilities in good condition.",
+        description:
+          "Affordable shared room for 2 students. Close to UNN main gate. Shared bathroom and kitchen facilities in good condition.",
         price: 80000,
+        agentFee: 8000,
+        legalFee: 5000,
+        cautionFee: 8000,
+        serviceCharge: 0,
+        agreementFee: 5000,
         roomType: "shared",
         location: "Hilltop, Nsukka",
         city: "Nsukka",
         distanceToSchool: "5min",
         amenities: ["water", "electricity"],
         availability: "immediate",
-        thumbnailUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80",
         videoUrl: "",
         agentName: "Amaka Onah",
         agentEmail: "amaka@lodgeit.ng",
@@ -160,15 +199,22 @@ export const seedListings = mutation({
       },
       {
         title: "Self-Contain – Odim Street Nsukka",
-        description: "Decent self-contain with indoor plumbing and kitchen. Quiet compound, borehole water, and prepaid meter. Walking distance to campus.",
+        description:
+          "Decent self-contain with indoor plumbing and kitchen. Quiet compound, borehole water, and prepaid meter. Walking distance to campus.",
         price: 150000,
+        agentFee: 15000,
+        legalFee: 10000,
+        cautionFee: 15000,
+        serviceCharge: 5000,
+        agreementFee: 10000,
         roomType: "self-contain",
         location: "Odim Street, Nsukka",
         city: "Nsukka",
         distanceToSchool: "10min",
         amenities: ["water", "electricity", "security"],
         availability: "immediate",
-        thumbnailUrl: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&q=80",
         videoUrl: "",
         agentName: "Ifeanyi Ugwu",
         agentEmail: "ifeanyi@lodgeit.ng",
@@ -178,15 +224,22 @@ export const seedListings = mutation({
       },
       {
         title: "Mini Flat – New Haven Enugu",
-        description: "Clean mini flat with bedroom, sitting area and kitchen all-in-one. Perfect for focused students. DSTV point, good ventilation and spacious wardrobe.",
+        description:
+          "Clean mini flat with bedroom, sitting area and kitchen all-in-one. Perfect for focused students. DSTV point, good ventilation and spacious wardrobe.",
         price: 260000,
+        agentFee: 26000,
+        legalFee: 15000,
+        cautionFee: 26000,
+        serviceCharge: 8000,
+        agreementFee: 15000,
         roomType: "self-contain",
         location: "New Haven, Enugu",
         city: "Enugu",
         distanceToSchool: "20min",
         amenities: ["water", "electricity", "parking"],
         availability: "next-month",
-        thumbnailUrl: "https://images.unsplash.com/photo-1564078516393-cf04bd966897?w=600&q=80",
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1564078516393-cf04bd966897?w=600&q=80",
         videoUrl: "",
         agentName: "Blessing Ani",
         agentEmail: "blessing@lodgeit.ng",
@@ -200,5 +253,27 @@ export const seedListings = mutation({
       await ctx.db.insert("listings", listing);
     }
     return "seeded";
+  },
+});
+
+// ── Helper: compute total move-in cost for a listing ──
+export const getTotalCost = query({
+  args: { id: v.id("listings") },
+  handler: async (ctx, args) => {
+    const listing = await ctx.db.get(args.id);
+    if (!listing) return null;
+
+    const breakdown = {
+      rent: listing.price,
+      agentFee: listing.agentFee ?? 0,
+      legalFee: listing.legalFee ?? 0,
+      cautionFee: listing.cautionFee ?? 0,
+      serviceCharge: listing.serviceCharge ?? 0,
+      agreementFee: listing.agreementFee ?? 0,
+    };
+
+    const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
+
+    return { breakdown, total };
   },
 });

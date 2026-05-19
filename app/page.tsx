@@ -235,7 +235,9 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {sorted.map((listing, i) => (
-                  <ListingCard key={listing._id} listing={listing} index={i} />
+                  <Link href={`/listing/${listing._id}`}>
+                    <ListingCard key={listing._id} listing={listing} index={i} />
+                  </Link>
                 ))}
               </div>
             )}
